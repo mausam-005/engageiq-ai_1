@@ -15,6 +15,20 @@ class PrivacyMode(str, Enum):
     SHARE_WITH_TEACHER = "share_with_teacher"
 
 
+class EngagementState(str, Enum):
+    ENGAGED = "engaged"
+    PASSIVE = "passive"
+    DISTRACTED = "distracted"
+    DROWSY = "drowsy"
+    CONFUSED = "confused"
+
+
+class NudgeType(str, Enum):
+    POPUP = "popup"
+    AUDIO = "audio"
+    EMAIL = "email"
+
+
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
