@@ -3,6 +3,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.api import websocket
 from src.config.settings import settings
 
 app = FastAPI(
@@ -30,3 +31,4 @@ def health_check():
 # from src.api.routes import users, courses, sessions, engagement, reports
 # app.include_router(users.router, prefix="/api")
 # app.include_router(courses.router, prefix="/api")
+app.include_router(websocket.router)
