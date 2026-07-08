@@ -50,6 +50,9 @@ class User(Base):
     courses: Mapped[list["Course"]] = relationship(
         back_populates="teacher", cascade="all, delete-orphan"
     )
+    enrolled_courses: Mapped[list["Course"]] = relationship(
+        secondary="enrollments", back_populates="students"
+    )
     engagement_logs: Mapped[list["EngagementLog"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )

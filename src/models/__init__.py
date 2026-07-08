@@ -3,6 +3,7 @@
 from src.models.base import Base
 from src.models.course import Course
 from src.models.engagement_log import EngagementLog
+from src.models.enrollment import enrollments
 from src.models.nudge import Nudge
 from src.models.report import Report
 from src.models.session import Session
@@ -16,4 +17,5 @@ __all__ = [
     "EngagementLog",
     "Nudge",
     "Report",
+    "enrollments",
 ]

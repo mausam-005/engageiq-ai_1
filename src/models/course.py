@@ -37,6 +37,9 @@ class Course(Base):
     sessions: Mapped[list["Session"]] = relationship(
         back_populates="course", cascade="all, delete-orphan"
     )
+    students: Mapped[list["User"]] = relationship(
+        secondary="enrollments", back_populates="enrolled_courses"
+    )
 
     def __repr__(self) -> str:
         return f"<Course id={self.id} code={self.code} name={self.name}>"

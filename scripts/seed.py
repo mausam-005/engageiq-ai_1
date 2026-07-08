@@ -3,6 +3,7 @@
 import os
 import sys
 from datetime import datetime, timedelta
+from typing import Any
 
 # Add root folder to sys.path to enable imports from src
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -39,7 +40,7 @@ def seed_db() -> None:
 
     try:
         # 1. Teachers
-        teachers_data = [
+        teachers_data: list[dict[str, Any]] = [
             {"name": "Dr. Angela Smith", "email": "asmith@nst.edu"},
             {"name": "Prof. Robert Jones", "email": "rjones@nst.edu"},
         ]
@@ -76,7 +77,7 @@ def seed_db() -> None:
             students.append(student)
 
         # 3. Courses
-        courses_data = [
+        courses_data: list[dict[str, Any]] = [
             {
                 "name": "Data Structures and Algorithms",
                 "code": "CS201",
@@ -110,7 +111,7 @@ def seed_db() -> None:
         # 4. Sessions
         # Use a fixed baseline datetime to ensure strict idempotency across multiple runs
         now = datetime(2026, 6, 30, 12, 0, 0)
-        sessions_data = [
+        sessions_data: list[dict[str, Any]] = [
             # CS201 Sessions
             {
                 "course": courses[0],
@@ -177,7 +178,7 @@ def seed_db() -> None:
             db.query(EngagementLog).filter_by(session_id=first_session.id).first()
         )
         if not existing_logs:
-            log_entries = [
+            log_entries: list[dict[str, Any]] = [
                 {
                     "student": students[0],
                     "score": 92.5,
@@ -235,7 +236,7 @@ def seed_db() -> None:
         # 6. Nudges (Seeded for student1/student2 on first session)
         existing_nudges = db.query(Nudge).filter_by(session_id=first_session.id).first()
         if not existing_nudges:
-            nudge_entries = [
+            nudge_entries: list[dict[str, Any]] = [
                 {
                     "student": students[0],
                     "type": NudgeType.POPUP,

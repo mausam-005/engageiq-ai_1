@@ -66,6 +66,14 @@ class Settings(BaseSettings):
     secret_key: str = "change_this_in_production"
     frontend_url: str = "http://localhost:5173"
 
+    # Authentication (Google OAuth & JWT)
+    google_client_id: str = "mock_client_id"
+    google_client_secret: str = "mock_client_secret"
+    jwt_secret_key: str = "change_this_to_a_random_string_in_production"
+    jwt_algorithm: str = "HS256"
+    jwt_access_token_expire_minutes: int = 1440  # 24 hours
+    jwt_refresh_token_expire_days: int = 7
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

@@ -56,4 +56,4 @@ def test_preprocessor_invalid_input():
     """Test that preprocessor raises ValueError when input is None."""
     prep = FramePreprocessor()
     with pytest.raises(ValueError, match="Input frame cannot be None"):
-        prep.process(None)
+        prep.process(None)  # type: ignore
