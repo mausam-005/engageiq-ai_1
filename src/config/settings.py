@@ -58,6 +58,12 @@ class Settings(BaseSettings):
     gaze_iris_left_threshold: float = 0.35
     gaze_iris_right_threshold: float = 0.65
 
+    # Yawn & Fatigue Thresholds
+    yawn_mar_threshold: float = 0.6
+    yawn_duration_seconds: float = 2.0
+    yawn_fatigue_count: int = 3
+    yawn_fatigue_window_minutes: int = 10
+
     # Nudge settings
     nudge_cooldown_seconds: int = 300
     max_nudges_per_session: int = 5
