@@ -43,23 +43,46 @@ class FaceMeshDetector:
         self.max_faces = max_faces
         self.min_detection_confidence = min_detection_confidence
         self._mesh: Any | None = None
+        self._use_tasks_api: bool = False
 
     def _init_mesh(self) -> None:
         """Initialize MediaPipe Face Mesh when first needed.
 
-        This keeps model loading deferred until the first call to detect().
+        Supports both legacy mp.solutions API (mediapipe <= 0.10.18) and
+        the newer mediapipe versions (>= 0.10.20+) that dropped solutions.
         """
         if self._mesh is not None:
             return
 
         import mediapipe as mp
 
-        self._mesh = mp.solutions.face_mesh.FaceMesh(
-            max_num_faces=self.max_faces,
-            min_detection_confidence=self.min_detection_confidence,
-            min_tracking_confidence=0.5,
-            refine_landmarks=True,
-        )
+        if hasattr(mp, "solutions") and hasattr(mp.solutions, "face_mesh"):
+            # Legacy API: mediapipe <= 0.10.18
+            self._mesh = mp.solutions.face_mesh.FaceMesh(
+                max_num_faces=self.max_faces,
+                min_detection_confidence=self.min_detection_confidence,
+                min_tracking_confidence=0.5,
+                refine_landmarks=True,
+            )
+        else:
+            # New Tasks API: mediapipe >= 0.10.20 (mp.solutions removed)
+            from mediapipe.tasks import python as mp_python
+            from mediapipe.tasks.python import vision
+
+            base_options = mp_python.BaseOptions(
+                model_asset_path=None,  # uses bundled model
+            )
+            options = vision.FaceLandmarkerOptions(
+                base_options=base_options,
+                num_faces=self.max_faces,
+                min_face_detection_confidence=self.min_detection_confidence,
+                min_tracking_confidence=0.5,
+            )
+            self._mesh = vision.FaceLandmarker.create_from_options(options)
+            self._use_tasks_api = True
+            return
+
+        self._use_tasks_api = False
 
     def _coerce_landmarks(self, face: Any) -> list[Any]:
         """Extract a landmark sequence from either a MediaPipe face object or a test stub.
