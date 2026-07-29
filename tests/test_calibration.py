@@ -20,9 +20,10 @@ Covers:
 """
 
 import pytest
-from fastapi.testclient import TestClient
 from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
+from src.api.routes.calibration import _store, router
 from src.scoring.calibration import (
     DEFAULT_DROWSINESS_THRESHOLD,
     DEFAULT_EAR,
@@ -32,7 +33,6 @@ from src.scoring.calibration import (
     CalibrationData,
     CalibrationManager,
 )
-from src.api.routes.calibration import router, _store
 
 # ---------------------------------------------------------------------------
 # Test app for API tests

@@ -12,9 +12,10 @@ DELETE /api/v1/calibrate/{user_id}
     Remove stored calibration so the student starts fresh.
 """
 
+from typing import Dict, List
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from typing import Dict, List, Optional
 
 from src.scoring.calibration import CalibrationData, CalibrationManager
 
