@@ -34,7 +34,6 @@ from src.scoring.calibration import (
 )
 from src.api.routes.calibration import router, _store
 
-
 # ---------------------------------------------------------------------------
 # Test app for API tests
 # ---------------------------------------------------------------------------
@@ -48,20 +47,27 @@ client = TestClient(app)
 # Helpers
 # ---------------------------------------------------------------------------
 
-def make_manager(user_id=None, n_frames=450,
-                 ear=0.30, pitch=0.0, yaw=0.0, roll=0.0,
-                 expression="neutral") -> CalibrationManager:
+
+def make_manager(
+    user_id=None,
+    n_frames=450,
+    ear=0.30,
+    pitch=0.0,
+    yaw=0.0,
+    roll=0.0,
+    expression="neutral",
+) -> CalibrationManager:
     """Create a CalibrationManager pre-loaded with n_frames of identical data."""
     cm = CalibrationManager(user_id=user_id)
     for _ in range(n_frames):
-        cm.add_frame(ear=ear, pitch=pitch, yaw=yaw, roll=roll,
-                     expression=expression)
+        cm.add_frame(ear=ear, pitch=pitch, yaw=yaw, roll=roll, expression=expression)
     return cm
 
 
 # ---------------------------------------------------------------------------
 # 1. EAR threshold computation
 # ---------------------------------------------------------------------------
+
 
 class TestEARThreshold:
     def test_low_ear_student(self):
@@ -100,6 +106,7 @@ class TestEARThreshold:
 # 2. Gaze acceptance window
 # ---------------------------------------------------------------------------
 
+
 class TestGazeWindow:
     def test_zero_baseline_uses_symmetric_window(self):
         cm = CalibrationManager()
@@ -135,6 +142,7 @@ class TestGazeWindow:
 # 3. Expression distribution
 # ---------------------------------------------------------------------------
 
+
 class TestExpressionDistribution:
     def test_single_expression_gives_100_percent(self):
         cm = make_manager(n_frames=100, expression="neutral")
@@ -168,6 +176,7 @@ class TestExpressionDistribution:
 # 4. Full calibration round-trip
 # ---------------------------------------------------------------------------
 
+
 class TestFullCalibration:
     def test_finalise_returns_calibration_data(self):
         cm = make_manager(n_frames=450, ear=0.28, pitch=-1.0, yaw=3.0)
@@ -186,8 +195,9 @@ class TestFullCalibration:
         resting = 0.22
         cm = make_manager(n_frames=450, ear=resting)
         data = cm.finalise()
-        assert data.ear_threshold == pytest.approx(resting * EAR_DROWSINESS_RATIO,
-                                                   abs=1e-4)
+        assert data.ear_threshold == pytest.approx(
+            resting * EAR_DROWSINESS_RATIO, abs=1e-4
+        )
 
     def test_is_default_false_after_calibration(self):
         cm = make_manager(n_frames=10)
@@ -218,6 +228,7 @@ class TestFullCalibration:
 # 5. Default / skipped calibration
 # ---------------------------------------------------------------------------
 
+
 class TestDefaultCalibration:
     def test_default_has_is_default_true(self):
         data = CalibrationManager.default(user_id=7)
@@ -245,17 +256,26 @@ class TestDefaultCalibration:
 # 6. Serialisation / deserialisation
 # ---------------------------------------------------------------------------
 
+
 class TestSerialisation:
     def test_to_dict_contains_all_keys(self):
         cm = make_manager(n_frames=10)
         data = cm.finalise()
         d = data.to_dict()
         expected_keys = {
-            "user_id", "is_default", "resting_ear", "ear_threshold",
-            "baseline_pitch", "baseline_yaw", "baseline_roll",
-            "gaze_yaw_min", "gaze_yaw_max",
-            "gaze_pitch_min", "gaze_pitch_max",
-            "expression_distribution", "frames_collected",
+            "user_id",
+            "is_default",
+            "resting_ear",
+            "ear_threshold",
+            "baseline_pitch",
+            "baseline_yaw",
+            "baseline_roll",
+            "gaze_yaw_min",
+            "gaze_yaw_max",
+            "gaze_pitch_min",
+            "gaze_pitch_max",
+            "expression_distribution",
+            "frames_collected",
         }
         assert expected_keys.issubset(d.keys())
 
@@ -280,6 +300,7 @@ class TestSerialisation:
 # ---------------------------------------------------------------------------
 # 7. Reset
 # ---------------------------------------------------------------------------
+
 
 class TestReset:
     def test_reset_clears_buffers(self):
@@ -307,26 +328,30 @@ class TestReset:
 # 8. Progress tracking
 # ---------------------------------------------------------------------------
 
+
 class TestProgress:
     def test_progress_zero_at_start(self):
         cm = CalibrationManager()
         assert cm.progress() == pytest.approx(0.0)
 
     def test_progress_one_at_full_collection(self):
-        target = int(CalibrationManager.TARGET_DURATION_SECONDS
-                     * CalibrationManager.DEFAULT_FPS)
+        target = int(
+            CalibrationManager.TARGET_DURATION_SECONDS * CalibrationManager.DEFAULT_FPS
+        )
         cm = make_manager(n_frames=target)
         assert cm.progress() == pytest.approx(1.0)
 
     def test_progress_caps_at_one(self):
-        target = int(CalibrationManager.TARGET_DURATION_SECONDS
-                     * CalibrationManager.DEFAULT_FPS)
+        target = int(
+            CalibrationManager.TARGET_DURATION_SECONDS * CalibrationManager.DEFAULT_FPS
+        )
         cm = make_manager(n_frames=target * 2)
         assert cm.progress() == pytest.approx(1.0)
 
     def test_progress_midpoint(self):
-        target = int(CalibrationManager.TARGET_DURATION_SECONDS
-                     * CalibrationManager.DEFAULT_FPS)
+        target = int(
+            CalibrationManager.TARGET_DURATION_SECONDS * CalibrationManager.DEFAULT_FPS
+        )
         cm = make_manager(n_frames=target // 2)
         assert cm.progress() == pytest.approx(0.5, abs=0.02)
 
@@ -334,6 +359,7 @@ class TestProgress:
 # ---------------------------------------------------------------------------
 # 9. Add frame after finalise raises RuntimeError
 # ---------------------------------------------------------------------------
+
 
 class TestPostFinaliseGuard:
     def test_add_frame_after_finalise_raises(self):
@@ -347,6 +373,7 @@ class TestPostFinaliseGuard:
 # 10. Finalise with zero frames raises ValueError
 # ---------------------------------------------------------------------------
 
+
 class TestFinaliseEmpty:
     def test_finalise_empty_raises(self):
         cm = CalibrationManager()
@@ -357,6 +384,7 @@ class TestFinaliseEmpty:
 # ---------------------------------------------------------------------------
 # 11. Custom ear_ratio and tolerance config
 # ---------------------------------------------------------------------------
+
 
 class TestCustomConfig:
     def test_custom_ear_ratio(self):
@@ -374,6 +402,7 @@ class TestCustomConfig:
 # ---------------------------------------------------------------------------
 # 12. Summary string
 # ---------------------------------------------------------------------------
+
 
 class TestSummary:
     def test_summary_contains_ear(self):
@@ -395,42 +424,48 @@ class TestSummary:
 # 13. API: POST /calibrate/{user_id}
 # ---------------------------------------------------------------------------
 
+
 class TestAPIPost:
     def setup_method(self):
         _store.clear()
 
     def _make_frames(self, n=450, ear=0.28, pitch=0.0, yaw=0.0):
         return [
-            {"ear": ear, "pitch": pitch, "yaw": yaw, "roll": 0.0,
-             "expression": "neutral"}
+            {
+                "ear": ear,
+                "pitch": pitch,
+                "yaw": yaw,
+                "roll": 0.0,
+                "expression": "neutral",
+            }
             for _ in range(n)
         ]
 
     def test_post_returns_201(self):
-        resp = client.post("/api/v1/calibrate/1",
-                           json={"frames": self._make_frames()})
+        resp = client.post("/api/v1/calibrate/1", json={"frames": self._make_frames()})
         assert resp.status_code == 201
 
     def test_post_returns_correct_ear_threshold(self):
-        resp = client.post("/api/v1/calibrate/2",
-                           json={"frames": self._make_frames(ear=0.22)})
+        resp = client.post(
+            "/api/v1/calibrate/2", json={"frames": self._make_frames(ear=0.22)}
+        )
         data = resp.json()
-        assert data["ear_threshold"] == pytest.approx(0.22 * EAR_DROWSINESS_RATIO,
-                                                      abs=1e-3)
+        assert data["ear_threshold"] == pytest.approx(
+            0.22 * EAR_DROWSINESS_RATIO, abs=1e-3
+        )
 
     def test_post_stores_data(self):
-        client.post("/api/v1/calibrate/3",
-                    json={"frames": self._make_frames()})
+        client.post("/api/v1/calibrate/3", json={"frames": self._make_frames()})
         assert 3 in _store
 
     def test_post_is_default_false(self):
-        resp = client.post("/api/v1/calibrate/4",
-                           json={"frames": self._make_frames()})
+        resp = client.post("/api/v1/calibrate/4", json={"frames": self._make_frames()})
         assert resp.json()["is_default"] is False
 
     def test_post_frames_collected_matches(self):
-        resp = client.post("/api/v1/calibrate/5",
-                           json={"frames": self._make_frames(n=200)})
+        resp = client.post(
+            "/api/v1/calibrate/5", json={"frames": self._make_frames(n=200)}
+        )
         assert resp.json()["frames_collected"] == 200
 
 
@@ -438,20 +473,35 @@ class TestAPIPost:
 # 14. API: GET /calibrate/{user_id} — stored record
 # ---------------------------------------------------------------------------
 
+
 class TestAPIGet:
     def setup_method(self):
         _store.clear()
 
     def test_get_stored_returns_200(self):
-        frames = [{"ear": 0.30, "pitch": 0.0, "yaw": 0.0,
-                   "roll": 0.0, "expression": "neutral"}] * 100
+        frames = [
+            {
+                "ear": 0.30,
+                "pitch": 0.0,
+                "yaw": 0.0,
+                "roll": 0.0,
+                "expression": "neutral",
+            }
+        ] * 100
         client.post("/api/v1/calibrate/10", json={"frames": frames})
         resp = client.get("/api/v1/calibrate/10")
         assert resp.status_code == 200
 
     def test_get_returns_correct_user_id(self):
-        frames = [{"ear": 0.30, "pitch": 0.0, "yaw": 0.0,
-                   "roll": 0.0, "expression": "neutral"}] * 100
+        frames = [
+            {
+                "ear": 0.30,
+                "pitch": 0.0,
+                "yaw": 0.0,
+                "roll": 0.0,
+                "expression": "neutral",
+            }
+        ] * 100
         client.post("/api/v1/calibrate/11", json={"frames": frames})
         resp = client.get("/api/v1/calibrate/11")
         assert resp.json()["user_id"] == 11
@@ -460,6 +510,7 @@ class TestAPIGet:
 # ---------------------------------------------------------------------------
 # 15. API: GET /calibrate/{user_id} — default fallback
 # ---------------------------------------------------------------------------
+
 
 class TestAPIGetDefault:
     def setup_method(self):
@@ -482,20 +533,35 @@ class TestAPIGetDefault:
 # 16. API: DELETE /calibrate/{user_id}
 # ---------------------------------------------------------------------------
 
+
 class TestAPIDelete:
     def setup_method(self):
         _store.clear()
 
     def test_delete_existing_returns_204(self):
-        frames = [{"ear": 0.30, "pitch": 0.0, "yaw": 0.0,
-                   "roll": 0.0, "expression": "neutral"}] * 10
+        frames = [
+            {
+                "ear": 0.30,
+                "pitch": 0.0,
+                "yaw": 0.0,
+                "roll": 0.0,
+                "expression": "neutral",
+            }
+        ] * 10
         client.post("/api/v1/calibrate/20", json={"frames": frames})
         resp = client.delete("/api/v1/calibrate/20")
         assert resp.status_code == 204
 
     def test_delete_removes_from_store(self):
-        frames = [{"ear": 0.30, "pitch": 0.0, "yaw": 0.0,
-                   "roll": 0.0, "expression": "neutral"}] * 10
+        frames = [
+            {
+                "ear": 0.30,
+                "pitch": 0.0,
+                "yaw": 0.0,
+                "roll": 0.0,
+                "expression": "neutral",
+            }
+        ] * 10
         client.post("/api/v1/calibrate/21", json={"frames": frames})
         client.delete("/api/v1/calibrate/21")
         assert 21 not in _store
@@ -505,8 +571,15 @@ class TestAPIDelete:
         assert resp.status_code == 404
 
     def test_after_delete_get_returns_defaults(self):
-        frames = [{"ear": 0.22, "pitch": 0.0, "yaw": 0.0,
-                   "roll": 0.0, "expression": "neutral"}] * 10
+        frames = [
+            {
+                "ear": 0.22,
+                "pitch": 0.0,
+                "yaw": 0.0,
+                "roll": 0.0,
+                "expression": "neutral",
+            }
+        ] * 10
         client.post("/api/v1/calibrate/22", json={"frames": frames})
         client.delete("/api/v1/calibrate/22")
         resp = client.get("/api/v1/calibrate/22")

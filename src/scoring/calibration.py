@@ -42,7 +42,6 @@ import statistics
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
-
 # ---------------------------------------------------------------------------
 # Population-level defaults (used when calibration is skipped)
 # ---------------------------------------------------------------------------
@@ -57,7 +56,7 @@ DEFAULT_ROLL: float = 0.0
 EAR_DROWSINESS_RATIO: float = 0.80
 
 # Gaze thresholds (degrees away from personal neutral before "away" fires)
-GAZE_YAW_TOLERANCE: float = 20.0   # ± degrees
+GAZE_YAW_TOLERANCE: float = 20.0  # ± degrees
 GAZE_PITCH_TOLERANCE: float = 15.0  # ± degrees
 
 
@@ -364,9 +363,7 @@ class CalibrationManager:
         """
         self.ear_threshold = self._compute_ear_threshold(resting_ear)
 
-    def calibrate_pose(
-        self, pitch: float, yaw: float, roll: float = 0.0
-    ) -> None:
+    def calibrate_pose(self, pitch: float, yaw: float, roll: float = 0.0) -> None:
         """Set gaze acceptance window from a known natural head pose.
 
         Args:
@@ -420,18 +417,14 @@ class CalibrationManager:
         """Threshold = resting EAR × ratio (default 0.80)."""
         return resting_ear * self.ear_ratio
 
-    def _compute_gaze_yaw_window(
-        self, baseline_yaw: float
-    ) -> Tuple[float, float]:
+    def _compute_gaze_yaw_window(self, baseline_yaw: float) -> Tuple[float, float]:
         """Gaze yaw acceptance window centred on the student's natural yaw."""
         return (
             baseline_yaw - self.yaw_tolerance,
             baseline_yaw + self.yaw_tolerance,
         )
 
-    def _compute_gaze_pitch_window(
-        self, baseline_pitch: float
-    ) -> Tuple[float, float]:
+    def _compute_gaze_pitch_window(self, baseline_pitch: float) -> Tuple[float, float]:
         """Gaze pitch acceptance window centred on the student's natural pitch."""
         return (
             baseline_pitch - self.pitch_tolerance,
