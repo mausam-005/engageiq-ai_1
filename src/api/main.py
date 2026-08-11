@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api import websocket
-from src.api.routes import auth, courses, users
+from src.api.routes import auth, courses, nudge, users
 from src.config.settings import settings
 
 app = FastAPI(
@@ -26,6 +26,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api/v1")
 app.include_router(users.router, prefix="/api/v1")
 app.include_router(courses.router, prefix="/api/v1")
+app.include_router(nudge.router, prefix="/api")
 
 
 @app.get("/health")
