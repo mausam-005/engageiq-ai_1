@@ -2,7 +2,11 @@ from typing import Dict, List, Optional, TypedDict
 
 from langgraph.graph import END, StateGraph
 
-from src.nudge.nudge_decision import NudgeDecision, NudgeDecisionEngine, normalize_nudge_type
+from src.nudge.nudge_decision import (
+    NudgeDecision,
+    NudgeDecisionEngine,
+    normalize_nudge_type,
+)
 
 
 class NudgeAgentState(TypedDict):
