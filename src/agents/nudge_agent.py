@@ -2,7 +2,7 @@ from typing import Dict, List, Optional, TypedDict
 
 from langgraph.graph import END, StateGraph
 
-from src.nudge.nudge_decision import NudgeDecision, NudgeDecisionEngine
+from src.nudge.nudge_decision import NudgeDecision, NudgeDecisionEngine, normalize_nudge_type
 
 
 class NudgeAgentState(TypedDict):
@@ -85,12 +85,12 @@ def select_nudge_type(state: NudgeAgentState):
     if eff_history:
         last_nudge = eff_history[-1]
         was_effective = last_nudge.get("was_effective", True)
-        last_type = last_nudge.get("nudge_type")
+        last_type = normalize_nudge_type(last_nudge.get("nudge_type"))
 
         if not was_effective:
-            if last_type == "POPUP":
+            if last_type == "popup":
                 nudge_type = "AUDIO"
-            elif last_type == "AUDIO":
+            elif last_type == "audio":
                 nudge_type = "EMAIL"
 
     return {"nudge_type": nudge_type}
