@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import NudgePreferences from "./components/NudgePreferences";
 
 export default function App() {
   const [health, setHealth] = useState(null);
@@ -12,12 +13,18 @@ export default function App() {
 
   return (
     <div style={{ fontFamily: "sans-serif", padding: "2rem" }}>
-      <h1>EngageIQ AI</h1>
-      <p>Agentic classroom engagement monitoring system</p>
-      <p>
-        Backend status:{" "}
-        <strong>{health ? health.status : "checking..."}</strong>
-      </p>
+      {window.location.pathname === "/student/settings/nudge" ? (
+        <NudgePreferences />
+      ) : (
+        <>
+          <h1>EngageIQ AI</h1>
+          <p>Agentic classroom engagement monitoring system</p>
+          <p>
+            Backend status: {" "}
+            <strong>{health ? health.status : "checking..."}</strong>
+          </p>
+        </>
+      )}
     </div>
   );
 }

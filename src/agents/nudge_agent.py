@@ -30,6 +30,20 @@ class NudgeAgentState(TypedDict):
 def evaluate_engagement(state: NudgeAgentState):
     """Checks if the student's current state warrants a potential nudge."""
     engine = state.get("engine", NudgeDecisionEngine())
+    # If preferences are supplied in the state, adjust engine cooldown accordingly
+    prefs = state.get("preferences")
+    if prefs:
+        # prefs may be a dict-like or model; read sensitivity
+        sensitivity = getattr(prefs, "sensitivity", None) or (
+            prefs.get("sensitivity") if isinstance(prefs, dict) else None
+        )
+        if sensitivity:
+            if sensitivity == "less":
+                engine.cooldown_seconds = 600
+            elif sensitivity == "normal":
+                engine.cooldown_seconds = 300
+            elif sensitivity == "more":
+                engine.cooldown_seconds = 180
     trigger_states = ["distracted", "drowsy", "confused"]
 
     is_distracted = state["current_state"].lower() in trigger_states
@@ -48,6 +62,34 @@ def evaluate_engagement(state: NudgeAgentState):
 def check_history(state: NudgeAgentState):
     """Checks cooldowns and max limit rules."""
     engine = state.get("engine", NudgeDecisionEngine())
+
+    # Respect quiet hours if preferences provided
+    prefs = state.get("preferences")
+    if prefs:
+        start = getattr(prefs, "quiet_hours_start", None) or (
+            prefs.get("quiet_hours_start") if isinstance(prefs, dict) else None
+        )
+        end = getattr(prefs, "quiet_hours_end", None) or (
+            prefs.get("quiet_hours_end") if isinstance(prefs, dict) else None
+        )
+        if start and end:
+            from datetime import datetime
+
+            now_time = datetime.now().strftime("%H:%M")
+
+            def in_range(now: str, start_t: str, end_t: str) -> bool:
+                # Handles ranges that cross midnight
+                if start_t <= end_t:
+                    return start_t <= now < end_t
+                # crosses midnight
+                return now >= start_t or now < end_t
+
+            if in_range(now_time, start, end):
+                return {
+                    "history_ok": False,
+                    "should_nudge": False,
+                    "reason": "Quiet hours active",
+                }
 
     if state["session_nudge_count"] >= engine.max_nudges:
         return {
@@ -93,7 +135,45 @@ def select_nudge_type(state: NudgeAgentState):
             elif last_type == "AUDIO":
                 nudge_type = "EMAIL"
 
-    return {"nudge_type": nudge_type}
+    # Ensure selected type is allowed by preferences, otherwise pick next available
+    prefs = state.get("preferences")
+
+    def _type_channel_allowed(nudge_type: str, prefs: dict | object | None) -> bool:
+        """Check whether the chosen nudge_type maps to an allowed channel per preferences."""
+        # Map nudge types to channels
+        mapping = {
+            "POPUP": "overlay",
+            "AUDIO": "audio",
+            "EMAIL": "notification",
+        }
+        channel = mapping.get(nudge_type)
+        if prefs is None or channel is None:
+            return True
+        # prefs may be an object or dict
+
+        def getp(name: str):
+            if isinstance(prefs, dict):
+                return prefs.get(name)
+            return getattr(prefs, name, None)
+
+        if channel == "overlay":
+            return bool(getp("overlay_enabled"))
+        if channel == "audio":
+            return bool(getp("audio_enabled"))
+        if channel == "notification":
+            return bool(getp("notification_enabled"))
+        return True
+
+    if _type_channel_allowed(nudge_type, prefs):
+        return {"nudge_type": nudge_type}
+
+    # Try escalation order for available channels
+    for candidate in ["POPUP", "AUDIO", "EMAIL"]:
+        if _type_channel_allowed(candidate, prefs):
+            return {"nudge_type": candidate}
+
+    # No channels available
+    return {"nudge_type": None}
 
 
 def record_decision(state: NudgeAgentState):
