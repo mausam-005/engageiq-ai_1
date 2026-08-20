@@ -2,6 +2,14 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 
+def normalize_nudge_type(nudge_type: Optional[str]) -> str:
+    """Normalize nudge type labels for compatibility across history formats."""
+    normalized = str(nudge_type or "").strip().lower()
+    if normalized == "notification":
+        return "popup"
+    return normalized
+
+
 @dataclass
 class NudgeDecision:
     should_nudge: bool
@@ -74,14 +82,14 @@ class NudgeDecisionEngine:
 
         if effectiveness_history:
             last_nudge = effectiveness_history[-1]
-            last_type = last_nudge.get("nudge_type")
+            last_type = normalize_nudge_type(last_nudge.get("nudge_type"))
             was_effective = last_nudge.get("was_effective", True)
 
             if not was_effective:
                 # Escalate if the last nudge didn't work
-                if last_type == "POPUP":
+                if last_type == "popup":
                     nudge_type = "AUDIO"
-                elif last_type == "AUDIO":
+                elif last_type == "audio":
                     nudge_type = "EMAIL"
 
         return NudgeDecision(
