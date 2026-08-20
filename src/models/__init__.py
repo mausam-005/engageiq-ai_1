@@ -1,6 +1,7 @@
 """Models package - SQLAlchemy ORM models."""
 
 from src.models.base import Base
+from src.models.calibration import Calibration
 from src.models.course import Course
 from src.models.engagement_log import EngagementLog
 from src.models.enrollment import enrollments
@@ -18,6 +19,7 @@ __all__ = [
     "EngagementLog",
     "Nudge",
     "Preferences",
+    "Calibration",
     "Report",
     "enrollments",
 ]

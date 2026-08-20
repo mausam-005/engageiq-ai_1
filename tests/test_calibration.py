@@ -22,8 +22,33 @@ Covers:
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
-from src.api.routes.calibration import _store, router
+import src.models  # noqa: F401
+from src.api.routes.calibration import get_db
+from src.models.base import Base
+from src.models.calibration import Calibration
+
+engine = create_engine(
+    "sqlite:///:memory:",
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base.metadata.create_all(bind=engine)
+
+
+def override_get_db():
+    db = TestingSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+from src.api.routes.calibration import router
 from src.scoring.calibration import (
     DEFAULT_DROWSINESS_THRESHOLD,
     DEFAULT_EAR,
@@ -40,6 +65,7 @@ from src.scoring.calibration import (
 
 app = FastAPI()
 app.include_router(router, prefix="/api/v1")
+app.dependency_overrides[get_db] = override_get_db
 client = TestClient(app)
 
 
@@ -427,7 +453,10 @@ class TestSummary:
 
 class TestAPIPost:
     def setup_method(self):
-        _store.clear()
+        db = TestingSessionLocal()
+        db.query(Calibration).delete()
+        db.commit()
+        db.close()
 
     def _make_frames(self, n=450, ear=0.28, pitch=0.0, yaw=0.0):
         return [
@@ -456,7 +485,9 @@ class TestAPIPost:
 
     def test_post_stores_data(self):
         client.post("/api/v1/calibrate/3", json={"frames": self._make_frames()})
-        assert 3 in _store
+        db = TestingSessionLocal()
+        assert db.query(Calibration).filter_by(user_id=3).first() is not None
+        db.close()
 
     def test_post_is_default_false(self):
         resp = client.post("/api/v1/calibrate/4", json={"frames": self._make_frames()})
@@ -476,7 +507,10 @@ class TestAPIPost:
 
 class TestAPIGet:
     def setup_method(self):
-        _store.clear()
+        db = TestingSessionLocal()
+        db.query(Calibration).delete()
+        db.commit()
+        db.close()
 
     def test_get_stored_returns_200(self):
         frames = [
@@ -514,7 +548,10 @@ class TestAPIGet:
 
 class TestAPIGetDefault:
     def setup_method(self):
-        _store.clear()
+        db = TestingSessionLocal()
+        db.query(Calibration).delete()
+        db.commit()
+        db.close()
 
     def test_get_unknown_user_returns_200(self):
         resp = client.get("/api/v1/calibrate/999")
@@ -536,7 +573,10 @@ class TestAPIGetDefault:
 
 class TestAPIDelete:
     def setup_method(self):
-        _store.clear()
+        db = TestingSessionLocal()
+        db.query(Calibration).delete()
+        db.commit()
+        db.close()
 
     def test_delete_existing_returns_204(self):
         frames = [
@@ -564,7 +604,9 @@ class TestAPIDelete:
         ] * 10
         client.post("/api/v1/calibrate/21", json={"frames": frames})
         client.delete("/api/v1/calibrate/21")
-        assert 21 not in _store
+        db = TestingSessionLocal()
+        assert db.query(Calibration).filter_by(user_id=21).first() is None
+        db.close()
 
     def test_delete_nonexistent_returns_404(self):
         resp = client.delete("/api/v1/calibrate/9999")
