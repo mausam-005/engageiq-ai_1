@@ -12,9 +12,11 @@ from src.config.settings import PrivacyMode, UserRole
 from src.models.base import Base
 
 if TYPE_CHECKING:
+    from src.models.calibration import Calibration
     from src.models.course import Course
     from src.models.engagement_log import EngagementLog
     from src.models.nudge import Nudge
+    from src.models.preferences import Preferences
 
 
 class User(Base):
@@ -62,6 +64,11 @@ class User(Base):
 
     # One-to-one preferences relationship
     preferences: Mapped["Preferences"] = relationship(
+        back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
+
+    # One-to-one calibration relationship
+    calibration: Mapped["Calibration"] = relationship(
         back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
 

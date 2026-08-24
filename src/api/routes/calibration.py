@@ -14,19 +14,38 @@ DELETE /api/v1/calibrate/{user_id}
 
 from typing import Dict, List
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 
+from src.models.calibration import Calibration
 from src.scoring.calibration import CalibrationData, CalibrationManager
 
 router = APIRouter(prefix="/calibrate", tags=["calibration"])
 
+
 # ---------------------------------------------------------------------------
-# In-memory store (replace with DB queries in production)
+# Database session helper
 # ---------------------------------------------------------------------------
 
-# Maps user_id → serialised CalibrationData dict
-_store: Dict[int, dict] = {}
+
+def _get_db_url() -> str:
+    """Return the database URL from environment or a sensible default."""
+    import os
+
+    return os.getenv("DATABASE_URL", "sqlite:///./engageiq.db")
+
+
+def get_db():
+    """Yield a SQLAlchemy database session."""
+    engine = create_engine(_get_db_url())
+    SessionLocal = sessionmaker(bind=engine)
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 # ---------------------------------------------------------------------------
@@ -89,16 +108,21 @@ def _to_response(data: CalibrationData, message: str) -> CalibrationResponse:
 
 
 @router.post("/{user_id}", response_model=CalibrationResponse, status_code=201)
-def submit_calibration(user_id: int, payload: CalibrationRequest):
+def submit_calibration(
+    user_id: int,
+    payload: CalibrationRequest,
+    db: Session = Depends(get_db),
+):
     """Process calibration frames and persist personalised thresholds.
 
-    The client collects ~450 frames (30 s × 15 FPS) from the CV pipeline
+    The client collects ~450 frames (30 s x 15 FPS) from the CV pipeline
     and sends them in one batch. This endpoint computes baselines and stores
-    the result.
+    the result in the database.
 
     Args:
         user_id: Student's database ID.
         payload: Frame measurements from the 30-second calibration window.
+        db: SQLAlchemy database session (injected).
 
     Returns:
         CalibrationResponse with personalised EAR and gaze thresholds.
@@ -119,7 +143,14 @@ def submit_calibration(user_id: int, payload: CalibrationRequest):
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
-    _store[user_id] = data.to_dict()
+    # Upsert: update existing or create new
+    existing = db.query(Calibration).filter_by(user_id=user_id).first()
+    if existing:
+        existing.calibration_data = data.to_dict()
+    else:
+        record = Calibration(user_id=user_id, calibration_data=data.to_dict())
+        db.add(record)
+    db.commit()
 
     return _to_response(
         data,
@@ -133,7 +164,7 @@ def submit_calibration(user_id: int, payload: CalibrationRequest):
 
 
 @router.get("/{user_id}", response_model=CalibrationResponse)
-def get_calibration(user_id: int):
+def get_calibration(user_id: int, db: Session = Depends(get_db)):
     """Retrieve stored calibration data for a student.
 
     Falls back to population-level defaults (is_default=True) when no
@@ -141,18 +172,21 @@ def get_calibration(user_id: int):
 
     Args:
         user_id: Student's database ID.
+        db: SQLAlchemy database session (injected).
 
     Returns:
-        CalibrationResponse — either personalised or default thresholds.
+        CalibrationResponse -- either personalised or default thresholds.
     """
-    if user_id in _store:
-        data = CalibrationData.from_dict(_store[user_id])
+    record = db.query(Calibration).filter_by(user_id=user_id).first()
+
+    if record:
+        data = CalibrationData.from_dict(record.calibration_data)
         message = "Returning stored calibration data."
     else:
         data = CalibrationManager.default(user_id=user_id)
         message = (
             "No calibration found for this student. "
-            "Using default thresholds — may be less accurate for you. "
+            "Using default thresholds -- may be less accurate for you. "
             "Complete a 30-second calibration for better results."
         )
 
@@ -160,18 +194,21 @@ def get_calibration(user_id: int):
 
 
 @router.delete("/{user_id}", status_code=204)
-def delete_calibration(user_id: int):
+def delete_calibration(user_id: int, db: Session = Depends(get_db)):
     """Remove stored calibration data so the student can recalibrate.
 
     Args:
         user_id: Student's database ID.
+        db: SQLAlchemy database session (injected).
 
     Raises:
         404 if no calibration record exists for this user.
     """
-    if user_id not in _store:
+    record = db.query(Calibration).filter_by(user_id=user_id).first()
+    if not record:
         raise HTTPException(
             status_code=404,
             detail=f"No calibration record found for user {user_id}.",
         )
-    del _store[user_id]
+    db.delete(record)
+    db.commit()
